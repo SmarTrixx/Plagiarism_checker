@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Comparison Results</h4>
+            </div>
+            <div class="card-body">
+                <h5>Analyzed Files:</h5>
+                <ul class="file-list">
+                    {% for filename in filenames %}
+                        <li><i class="bi bi-file-earmark"></i> {{ filename }}</li>
+                    {% endfor %}
+                </ul>
+                
+                <div class="table-responsive mt-4">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>S/N</th>
+                                <th>File 1</th>
+                                <th>File 2</th>
+                                <th>Similarity Score</th>
+                                <th>Risk Level</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for comp in comparisons %}
+                                <tr class="risk-{{ comp.risk_level|lower|replace(' ', '') }}">
+                                    <td>{{ comp.sn }}</td>
+                                    <td>{{ comp.file1 }}</td>
+                                    <td>{{ comp.file2 }}</td>
+                                    <td>{{ comp.similarity }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ comp.risk_class }} similarity-badge">
+                                            {{ comp.risk_level }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Similarity Heatmap</h4>
+            </div>
+            <div class="card-body">
+                <div class="heatmap-container">
+                    <img src="data:image/png;base64,{{ heatmap }}" alt="Similarity Heatmap" class="img-fluid">
+                </div>
+                <div class="mt-3">
+                    <p class="text-muted">The heatmap shows pairwise similarity scores between documents. Darker colors indicate higher similarity.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12 text-center">
+        <a href="/" class="btn btn-primary">
+            <i class="bi bi-arrow-left"></i> Back to Upload
+        </a>
+    </div>
+</div>
+{% endblock %}

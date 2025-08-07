@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Upload Documents for Comparison</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                    <div class="mb-3">
+                        <label for="files" class="form-label">Select documents (PDF, DOCX, JPG, PNG):</label>
+                        <input class="form-control" type="file" id="files" name="files" multiple required>
+                        <div class="form-text">Select at least 2 files to compare</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="threshold" class="form-label">Similarity Threshold (0-1):</label>
+                        <input type="number" class="form-control" id="threshold" name="threshold" 
+                               min="0" max="1" step="0.01" value="0.75" required>
+                        <div class="form-text">Only show comparisons above this threshold</div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="bi bi-upload"></i> Upload and Analyze
+                    </button>
+                    
+                    <!-- Progress indicator (hidden by default) -->
+                    <div id="progressIndicator" class="mt-3 text-center" style="display: none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Processing...</span>
+                        </div>
+                        <p class="mt-2">Processing your documents. This may take a while...</p>
+                    </div>
+                </form>
+                
+                <div class="mt-4">
+                    <h5>How it works:</h5>
+                    <ul>
+                        <li>Upload multiple documents (handwritten or typed)</li>
+                        <li>Set your preferred similarity threshold</li>
+                        <li>The system will compare all unique pairs</li>
+                        <li>Results will show only matches above threshold</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('uploadForm').addEventListener('submit', function() {
+    // Show progress indicator
+    document.getElementById('progressIndicator').style.display = 'block';
+    // Disable submit button to prevent multiple submissions
+    document.getElementById('submitBtn').disabled = true;
+    // Change button text
+    document.getElementById('submitBtn').innerHTML = '<i class="bi bi-hourglass"></i> Processing...';
+});
+</script>
+
+<style>
+/* Add some animation to the spinner */
+.spinner-border {
+    width: 3rem; 
+    height: 3rem;
+    border-width: 0.25em;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Style the progress text */
+#progressIndicator p {
+    color: #666;
+    font-size: 0.9rem;
+}
+</style>
+{% endblock %}

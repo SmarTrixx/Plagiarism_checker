@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Comparison Results (Threshold: {{ threshold }})</h4>
+                <a href="{{ url_for('download_report', files=request.args.get('files'), threshold=threshold) }}" 
+                   class="btn btn-light">
+                    <i class="bi bi-download"></i> Download Report
+                </a>
+            </div>
+            <div class="card-body">
+                <h5>Analyzed Files:</h5>
+                <ul class="file-list">
+                    {% for filename in filenames %}
+                        <li><i class="bi bi-file-earmark"></i> {{ filename }}</li>
+                    {% endfor %}
+                </ul>
+                
+                <div class="table-responsive mt-4">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>S/N</th>
+                                <th>File 1</th>
+                                <th>File 2</th>
+                                <th>Similarity Score</th>
+                                <th>Risk Level</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for comp in comparisons %}
+                                <tr class="risk-{{ comp.risk_level|lower|replace(' ', '') }}">
+                                    <td>{{ comp.sn }}</td>
+                                    <td>{{ comp.file1 }}</td>
+                                    <td>{{ comp.file2 }}</td>
+                                    <td>{{ comp.similarity }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ comp.risk_class }} similarity-badge">
+                                            {{ comp.risk_level }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" 
+                                                data-bs-target="#detailsModal{{ comp.sn }}">
+                                            <i class="bi bi-eye"></i> View
+                                        </button>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Details Modal -->
+                                <div class="modal fade" id="detailsModal{{ comp.sn }}" tabindex="-1">
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Comparison Details</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <h6>{{ comp.file1 }} vs {{ comp.file2 }}</h6>
+                                                <p class="text-muted">Similarity: {{ comp.similarity }} ({{ comp.risk_level }})</p>
+                                                
+                                                <div class="row mt-3">
+                                                    <div class="col-md-6">
+                                                        <div class="card">
+                                                            <div class="card-header">
+                                                                <strong>{{ comp.file1 }}</strong>
+                                                            </div>
+                                                            <div class="card-body">
+                                                                <pre style="white-space: pre-wrap;">{{ comp.text1|truncate(1000) }}</pre>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="card">
+                                                            <div class="card-header">
+                                                                <strong>{{ comp.file2 }}</strong>
+                                                            </div>
+                                                            <div class="card-body">
+                                                                <pre style="white-space: pre-wrap;">{{ comp.text2|truncate(1000) }}</pre>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center">No comparisons found above the threshold ({{ threshold }})</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Similarity Heatmap</h4>
+            </div>
+            <div class="card-body">
+                <div class="heatmap-container">
+                    <img src="data:image/png;base64,{{ heatmap }}" alt="Similarity Heatmap" class="img-fluid">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12 text-center">
+        <a href="/" class="btn btn-primary">
+            <i class="bi bi-arrow-left"></i> Back to Upload
+        </a>
+    </div>
+</div>
+{% endblock %}

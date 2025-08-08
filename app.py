@@ -1,6 +1,6 @@
 import os
 import tempfile
-from flask import Flask, request, render_template, redirect, url_for, flash, send_file
+from flask import Flask, request, render_template, redirect, url_for, flash, send_file, session
 from werkzeug.utils import secure_filename
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -17,6 +17,8 @@ from io import BytesIO, StringIO
 import base64
 from collections import defaultdict
 import csv
+import json
+from utils import allowed_file, preprocess_image, extract_text, extract_text_from_image, extract_text_from_pdf
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'pdf', 'docx', 'png', 'jpg', 'jpeg'}
@@ -29,60 +31,6 @@ model = SentenceTransformer('all-MiniLM-L6-v2')
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def preprocess_image(image):
-    """Enhance image quality for better OCR results"""
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                  cv2.THRESH_BINARY, 11, 2)
-    kernel = np.ones((1, 1), np.uint8)
-    processed = cv2.dilate(thresh, kernel, iterations=1)
-    processed = cv2.erode(processed, kernel, iterations=1)
-    return processed
-
-def extract_text_from_image(file_path):
-    try:
-        image = cv2.imread(file_path)
-        if image is None:
-            return ""
-        processed = preprocess_image(image)
-        custom_config = r'--oem 3 --psm 6'
-        text = pytesseract.image_to_string(processed, config=custom_config)
-        return text
-    except Exception as e:
-        print(f"Error processing image {file_path}: {e}")
-        return ""
-
-def extract_text_from_pdf(file_path):
-    text = ""
-    try:
-        doc = fitz.open(file_path)
-        for page in doc:
-            text += page.get_text()
-        if not text.strip():
-            images = convert_from_path(file_path)
-            for image in images:
-                text += pytesseract.image_to_string(image)
-    except Exception as e:
-        print(f"Error processing PDF {file_path}: {e}")
-    return text
-
-def extract_text(file_path):
-    ext = file_path.rsplit('.', 1)[-1].lower()
-    try:
-        if ext == 'pdf':
-            return extract_text_from_pdf(file_path)
-        elif ext == 'docx':
-            doc = Document(file_path)
-            return '\n'.join([para.text for para in doc.paragraphs])
-        elif ext in ['png', 'jpg', 'jpeg']:
-            return extract_text_from_image(file_path)
-    except Exception as e:
-        print(f"Error extracting text from {file_path}: {e}")
-    return ""
 
 def calculate_document_similarity(text1, text2):
     if not text1.strip() or not text2.strip():
@@ -162,7 +110,7 @@ def upload():
         
         file_paths = []
         for file in files:
-            if file and allowed_file(file.filename):
+            if file and allowed_file(file.filename, ALLOWED_EXTENSIONS):
                 filename = secure_filename(file.filename)
                 file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(file_path)
@@ -204,12 +152,12 @@ def results():
             similarity_matrix[j][i] = similarity
             
             if similarity >= threshold:
-                risk_level, risk_class = get_risk_level(similarity)
+                risk_level, risk_class = get_risk_level(float(similarity))  # ensure Python float
                 comparison_results.append({
                     'file1': filenames[i],
                     'file2': filenames[j],
-                    'similarity': f"{similarity*100:.1f}%",
-                    'score': similarity,
+                    'similarity': f"{float(similarity)*100:.1f}%",  # ensure Python float
+                    'score': float(similarity),                     # ensure Python float
                     'risk_level': risk_level,
                     'risk_class': risk_class,
                     'text1': text_contents[filenames[i]],
@@ -228,35 +176,23 @@ def results():
         print(f"Failed to generate heatmap: {e}")
         heatmap_data = None
     
+    # Store results in session
+    session['comparison_results'] = json.dumps(comparison_results)
+    session['filenames'] = json.dumps(filenames)
+    
     return render_template('results.html', 
                          comparisons=comparison_results,
-                         heatmap=heatmap_data,  # This can be None now
+                         heatmap=heatmap_data,
                          filenames=filenames,
                          threshold=threshold)
 
+from flask import session
+import json
+
 @app.route('/download-report')
 def download_report():
-    file_paths = request.args.get('files', '').split(',')
-    file_paths = [fp for fp in file_paths if fp]
-    threshold = float(request.args.get('threshold', 0.75))
-    
-    filenames = [os.path.basename(fp) for fp in file_paths]
-    comparison_results = []
-    
-    for i in range(len(file_paths)):
-        for j in range(i+1, len(file_paths)):
-            text1 = extract_text(file_paths[i])
-            text2 = extract_text(file_paths[j])
-            similarity = calculate_document_similarity(text1, text2)
-            if similarity >= threshold:
-                risk_level, _ = get_risk_level(similarity)
-                comparison_results.append({
-                    'file1': filenames[i],
-                    'file2': filenames[j],
-                    'similarity': f"{similarity*100:.1f}%",
-                    'risk_level': risk_level
-                })
-    
+    comparison_results = json.loads(session.get('comparison_results', '[]'))
+    filenames = json.loads(session.get('filenames', '[]'))
     report = generate_report(comparison_results, filenames)
     mem = BytesIO()
     mem.write(report.encode('utf-8'))

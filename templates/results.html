@@ -224,18 +224,4 @@
     }
 }
 </style>
-
-<script>
-// Enhance the details button functionality
-document.addEventListener('DOMContentLoaded', function() {
-    // Add click event to all details buttons
-    document.querySelectorAll('[data-bs-toggle="modal"]').forEach(button => {
-        button.addEventListener('click', function() {
-            const modalId = this.getAttribute('data-bs-target');
-            const modal = new bootstrap.Modal(document.querySelector(modalId));
-            modal.show();
-        });
-    });
-});
-</script>
 {% endblock %}
